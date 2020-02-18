@@ -1,0 +1,225 @@
+---
+title: "多元线性回归分析"
+author: "金林"
+date: "2020-02"
+output:
+  bookdown::html_document2:
+    fig_caption: true
+    highlight: haddock
+    keep_md: true
+    md_extensions: +east_asian_line_breaks
+    number_sections: true
+    pandoc_args:
+    - --filter
+    - pandoc-crossref
+    - -M
+    - eqnPrefix=
+    seq_numbering: false
+    toc: true
+  bookdown::pdf_document2:
+    keep_tex: true
+    latex_engine: xelatex
+    md_extensions: +east_asian_line_breaks
+    pandoc_args:
+    - --listing
+    - --filter
+    - pandoc-crossref
+    toc: false
+  slidy_presentation:
+    highlight: haddock
+  bookdown::word_document2:
+    fig_caption: true
+    md_extensions: +east_asian_line_breaks
+    pandoc_args:
+    - --filter
+    - pandoc-crossref
+    reference_docx: ./style/word-styles-02.docx
+  ioslides_presentation:
+    highlight: haddock
+    slide_level: 3
+  beamer_presentation:
+    keep_tex: true
+    latex_engine: xelatex
+    toc: true
+    pandoc_args:
+    - --listing
+    - --filter
+    - pandoc-crossref
+    slide_level: 3
+    template: ./style/beamer-template.tex
+csl: ./style/chinese-gb7714-2005-numeric.csl
+css: ./style/markdown.css
+bibliography: Bibfile.bib
+eqnPrefixTemplate: ($$i$$)
+institute: 中南财经政法大学统计与数学学院
+link-citations: true
+linkReferences: true
+chapters: true
+tableEqns: false
+autoEqnLabels: false
+---
+
+
+```{r setup, echo=F, purl=F}
+knitr::opts_knit$set(root.dir = getwd())
+knitr::opts_chunk$set(echo = TRUE, results = 'hide')
+knitr::opts_chunk$set(warning = FALSE, message=FALSE)
+knitr::opts_chunk$set(out.height="0.5\\textwidth", fig.width=5, fig.height=3, fig.align="center")
+```
+
+```{r prepare, echo=F, purl=F}
+rm(list=ls())
+options(digits=4)
+options(scipen=100)
+graphics.off()
+Sys.setlocale("LC_ALL", "Chinese")
+```
+
+### 构建数据集
+
+1. 从python中读取数据，建立数据框，提取GDP变量形成Y向量，提取Labor,Kapital,Technology,Energy四个变量加上截距向量构成设计矩阵X。
+
+```{python}
+import pandas as pd
+import numpy as np
+
+data_GDP = pd.read_excel("../../github_repo/zyb-python-homework/data/GDP.xls")
+data_GDP = data_GDP.dropna()
+data_GDP = data_GDP.reset_index(drop=True)
+Y = data_GDP.GDP
+X = data_GDP[['Labor','Kapital','Technology','Energy']]
+X =X.reindex(columns=['C','Labor','Kapital','Technology','Energy'],fill_value=1)
+n = len(data_GDP)
+X.head()
+```
+### 初步查看数据集信息
+
+```{python}
+data_GDP[['GDP','Labor','Kapital','Technology','Energy']].describe()
+
+import seaborn as sns
+sns.pairplot(data_GDP[['GDP','Labor','Kapital','Technology','Energy']],diag_kind='kde')
+```
+通过describe()方法可以统计每个变量的基本统计信息，通过sns.pairplot()获得散点图矩阵，
+从直观上可知GDP和Labor、Kapital、Technology、Energy四个变量具有一定的线性关系，
+用GDP与四个变量做多元线性回归是合适的。
+### 建立线性回归模型
+
+```{python}
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+fm = smf.ols('GDP~Labor+Kapital+Technology+Energy',data=data_GDP)
+res = fm.fit()#Fit model
+res.summary()
+res.params
+res.tvalues
+res.pvalues
+res.summary2().tables[1]
+```
+
+根据以上结果建立GDP关于Labor,Kapital,Technology,Energy的多元线性回归模型如下：
+$$
+G \hat{D} P=-2189-0.0664 \text{Labor}+3.1301 \text {Kapital}-69.9267 \text {Technology}+0.2185 \text {Energy}
+$$
+### 参数估计(估计回归模型的系数矩阵、因变量估计值、回归误差向量)
+
+```{python}
+betahat = np.dot(np.linalg.inv(X.T.dot(X)),X.T.dot(Y)) #系数矩阵
+Yhat = X.dot(betahat) #Y的估计值
+r = Y-Yhat #回归误差向量
+betahat
+```
+### 多元线性回归函数的拟合优度
+
+```{python}
+SST = (n-1)*np.var(Y) #总离差平方和
+SSE = r.T.dot(r) #残差平方和
+SSR = SST-SSE #回归平方和
+MST = np.var(Y) #总均方误差
+MSR = SSR/4 #回归均方误差
+MSE = SSE/(n-4-1) #残差均方误差
+R2 =SSR/SST #样本决定系数
+Adj_R2 = 1-MSE/MST #调整的决定系数
+```
+
+多元线性回归模型的样本决定系数为0.9965, 调整的决定系数为0.9962，这意味着
+多元线性回归方程对原始数据的拟合程度较高。
+### 线性关系显著性检验：F检验（右侧检验）
+
+```{python}
+from scipy import stats
+F_value = MSR/MSE #F统计量
+F_crit = stats.f.ppf(0.95,4,53) #F分布的临界值Fα(p,n-p-1)
+p_value = stats.f.sf(abs(F_value),4,53) #F统计量对应的P值
+F_crit
+```
+
+建立多元线性回归模型以后，对整个模型进行显著性的F检验。F统计量=3845＞3.007=F分布
+临界值F_crit,拒绝原假设H0，认为Labor、Kapital、Technology、Energy对GDP有显著的线
+性关系，也即认为回归方程是显著的。也可根据F统计量对应的P值做检验，由P值＜0.05，
+拒绝原假设$H_0:\beta_1=\beta_2=\beta_3=\beta_4=0$，同理可得回归方程是显著的。
+
+ 
+### 回归系数显著性检验：t检验（双侧检验）
+
+```{python}
+sigma2hat = MSE #求σ^2的估计值
+cov_betahat = sigma2hat*np.linalg.inv(X.T.dot(X)) #回归系数的方差协方差阵
+se_betahat = np.sqrt(np.diag(cov_betahat)) #回归系数的样本标准差对应的对角线元素
+t_value = betahat/se_betahat #t统计量
+t_crit = stats.t.ppf(0.975,53) #求t分布的临界值
+p_value = 2*stats.t.sf(abs(t_value),53) #t统计量对应的p值  
+t_test = pd.DataFrame({'t_value':t_value,
+                       't_crit' :t_crit,
+                       'p_value':p_value},index=['C','Labor','Kapital','Technology','Energy']) #以数据框输出t检验结果
+t_test
+```
+
+对于各回归系数进行显著性的t检验。在0.5显著性水平下，自变量Labor对应的回归
+系数$|t_value|<t_crit（p_value>α）$，不能拒绝原假设$H_0:\beta_j=0$,可以
+认为Labor对应的系数显著为零，即Labor对因变量GDP的线性效果不显著，其他三个自
+变量对因变量GDP的线性效果显著。
+### 回归系数的区间估计
+
+```{python}
+interval_betahat=pd.DataFrame({'回归系数估计值':betahat,
+                               '区间下限':betahat-t_crit*se_betahat,
+                               '区间上限':betahat+t_crit*se_betahat},
+                               index=['C','Labor','Kapital','Technology','Energy']) #(回归系数向量，区间下限，区间上限)
+interval_betahat
+```
+### 回归模型的预测值
+#### 点预测
+
+```{python}
+X_new = pd.DataFrame([[1,80000,160000,3000,300000],[1,75000,150000,2800,250000]])
+Yhat_new = X_new.dot(betahat)
+Yhat_new 
+```
+
+当Labor=80000，Kapital=160000，Technology=3000、Energy=300000，GDP的预测值为349081.7。
+当Labor=75000，Kapital=150000，Technology=2800、Energy=250000，GDP的预测值为321173.5。
+#### 区间预测
+
+```{python}
+predict_interval = pd.DataFrame({'预测值':Yhat_new,
+      '个别值预测下限':Yhat_new-t_crit*sigma2hat**0.5*np.sqrt(1+np.diag(X_new.dot(np.linalg.inv(X.T.dot(X))).dot(X_new.T))),
+      '个别值预测上限':Yhat_new+t_crit*sigma2hat**0.5*np.sqrt(1+np.diag(X_new.dot(np.linalg.inv(X.T.dot(X))).dot(X_new.T))),
+      '平均值预测下限':Yhat_new-t_crit*sigma2hat**0.5*np.sqrt(np.diag(X_new.dot(np.linalg.inv(X.T.dot(X))).dot(X_new.T))),
+      '平均值预测上限':Yhat_new+t_crit*sigma2hat**0.5*np.sqrt(np.diag(X_new.dot(np.linalg.inv(X.T.dot(X))).dot(X_new.T)))}) 
+predict_interval
+```
+
+当Labor=80000，Kapital=160000，Technology=3000、Energy=300000，
+GDP的预测值在（333187.4,364976.0）范围内的概率为95%。加上随机误差
+项的影响下，GDP的平均值在（337861.5,360301.9）范围内的概率为95%。
+
+当Labor=75000，Kapital=150000，Technology=2800、Energy=250000，
+GDP的预测值在（303874.4,338472.7）范围内的概率为95%。加上随机误差
+项的影响下，GDP的平均值在（308038.7,334308.4）范围内的概率为95%
+
+平均值区间的预测代表回归系数的波动导致预测因变量的平均响应的波动，
+个别值响应值是在原来的平均值的周围，以$\sigma$为标准差所形成的波动。
+由此可见个别值预测的区间宽于平均值预测的区间。
+
