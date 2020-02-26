@@ -106,16 +106,12 @@ sns.pairplot(data_GDP[['GDP','Labor','Kapital','Technology','Energy']],diag_kind
 ### 建立线性回归模型
 
 ```{python}
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-
-fm = smf.ols('GDP~Labor+Kapital+Technology+Energy',data=data_GDP)
-res = fm.fit()#Fit model
-res.summary()
-res.params
-res.tvalues
-res.pvalues
-res.summary2().tables[1]
+#from sklearn.model_selection import train_test_split 
+from sklearn.linear_model import LinearRegression 
+linreg = LinearRegression()
+linreg.fit(X, Y)
+linreg.coef_
+linreg.intercept_
 ```
 
 根据以上结果建立GDP关于Labor,Kapital,Technology,Energy的多元线性回归模型如下：

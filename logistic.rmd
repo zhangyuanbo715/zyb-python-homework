@@ -100,7 +100,7 @@ len(iris)
 from sklearn.model_selection import train_test_split
 x = iris.iloc[:,:-1]
 y = iris.Species
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3) 
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3,random_state=111) 
 ```
 
 # 建立模型
@@ -108,8 +108,10 @@ x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3)
 利用训练集建立模型。
 
 ```{python}
-res = sm.Logit(y_train, x_train).fit()
-res.summary() 
+from sklearn.linear_model import LogisticRegression
+logreg = LogisticRegression()
+logreg.fit(x_train, y_train)
+logreg.coef_
 ```
 
 根据回归结果可以得到logistic回归方程为：
@@ -121,14 +123,17 @@ $$
 # 预测
 
 ```{python}
-theta = 0.5 
-y_pre = res.predict(x_test)
-y_pre = (y_pre>=theta).astype(np.int)
-p = (y_test == y_pre).sum()/len(y_test)
-p
+y_pre = logreg.predict(x_test)
+from sklearn.metrics import accuracy_score
+accuracy_score(y_pre,y_test)
+#theta = 0.5 
+#y_pre = res.predict(x_test)
+#y_pre = (y_pre>=theta).astype(np.int)
+#p = (y_test == y_pre).sum()/len(y_test)
+#p
 ```
 
-根据以上结果，可以得到拟合的logistic模型在测试集上的准确率为93.3%,
+根据以上结果，可以得到拟合的logistic模型在测试集上的准确率为97.7%,
 说明该模型效果较好，可以根据花的特征来判断其品种。
 
 
