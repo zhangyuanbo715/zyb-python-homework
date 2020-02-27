@@ -376,26 +376,29 @@ x_tril[x_tril != 0] #下三角非零元素
 
 ```{python}
 def tslag(x, k = 1, trim = False):
+    x = list(x)
     if type(k) == int:
         x[-k:] = [np.nan]*k
         for i in range(k):###右移
             x.insert(0,x.pop())
+        if trim == True:
+            x = x[k:]
     else:
         c = []
         for i in k:
             y = x.copy()
             y[-i:] = [np.nan]*i
-            for j in range(k):###右移
+            for j in range(i):###右移
                 y.insert(0,y.pop())
             c = c+y 
-        x = c.reshape(len(x), len(k), order='F')
-    if trim == True:
-        x = x[~np.isnan(x).any(axis=1)]
+        x = np.array(c).reshape(len(x), len(k), order='F')
+        if trim == True:
+            x = x[len(k):,:]
     return x
 
 x = np.arange(1,11)
-tslag(x, k=3)#############在np.nan赋值那里报错，函数有问题
+tslag(x, k=3)
 tslag(x, k=[1,2,3,4])
 tslag(x,k=2,trim=True)
+tslag(x, k=[1,2,3,4],trim=True)
 ```
-
